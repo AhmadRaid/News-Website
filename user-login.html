@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Login - Global News Network</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .login-header {
+            margin-bottom: 30px;
+        }
+        
+        .login-header i {
+            font-size: 3rem;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .login-header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+        
+        .login-header p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .demo-info {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 0.85rem;
+            color: #2c3e50;
+            text-align: left;
+        }
+        
+        .demo-info strong {
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .demo-info code {
+            background: #d6eaf8;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .remember-me input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+        
+        .login-btn {
+            width: 100%;
+            background: #3498db;
+            color: white;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .login-btn:hover {
+            background: #2980b9;
+        }
+        
+        .login-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .alert-error {
+            background: #fee;
+            color: #c53030;
+            border: 1px solid #fed7d7;
+        }
+        
+        .alert-success {
+            background: #f0fff4;
+            color: #22543d;
+            border: 1px solid #c6f6d5;
+        }
+        
+        .links {
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+        
+        .links a {
+            color: #3498db;
+            text-decoration: none;
+            margin: 0 10px;
+            transition: color 0.3s ease;
+        }
+        
+        .links a:hover {
+            color: #2980b9;
+            text-decoration: underline;
+        }
+        
+        .divider {
+            margin: 20px 0;
+            text-align: center;
+            position: relative;
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e1e5e9;
+        }
+        
+        .divider span {
+            background: white;
+            padding: 0 15px;
+            color: #666;
+            font-size: 0.85rem;
+        }
+        
+        .loading {
+            display: none;
+            margin-top: 10px;
+        }
+        
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .login-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <i class="fas fa-user"></i>
+            <h1>Welcome Back</h1>
+            <p>Sign in to your Global News Network account</p>
+        </div>
+
+        <div class="demo-info">
+            <strong>Demo User Accounts:</strong>
+            Username: <code>user1</code> | Password: <code>password123</code><br>
+            Username: <code>john_doe</code> | Password: <code>mypass456</code>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">
+                    <i class="fas fa-user"></i> Username or Email
+                </label>
+                <input type="text" id="username" name="username" placeholder="Enter your username or email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">
+                    <i class="fas fa-lock"></i> Password
+                </label>
+                <input type="password" id="password" name="password" placeholder="Enter your password" required>
+            </div>
+
+            <div class="remember-me">
+                <input type="checkbox" id="rememberMe" name="rememberMe">
+                <label for="rememberMe">Remember me for 30 days</label>
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+            
+            <div class="loading" id="loading">
+                <i class="fas fa-spinner"></i> Signing you in...
+            </div>
+        </form>
+
+        <div class="links">
+            <a href="#" onclick="forgotPassword()">Forgot Password?</a>
+            <a href="user-register.html">Create Account</a>
+        </div>
+
+        <div class="divider">
+            <span>or</span>
+        </div>
+
+        <div class="links">
+            <a href="index.html">
+                <i class="fas fa-arrow-left"></i> Back to Website
+            </a>
+            <a href="admin-login.html">Admin Login</a>
+        </div>
+    </div>
+
+    <script>
+        // Demo user accounts
+        const demoUsers = [
+            {
+                id: 1,
+                username: 'user1',
+                email: 'user1@example.com',
+                password: 'password123',
+                fullName: 'John Smith',
+                joinDate: '2024-01-01'
+            },
+            {
+                id: 2,
+                username: 'john_doe',
+                email: 'john.doe@example.com',
+                password: 'mypass456',
+                fullName: 'John Doe',
+                joinDate: '2024-01-05'
+            },
+            {
+                id: 3,
+                username: 'sarah_wilson',
+                email: 'sarah.wilson@example.com',
+                password: 'sarah2024',
+                fullName: 'Sarah Wilson',
+                joinDate: '2024-01-10'
+            }
+        ];
+
+        // Check if user is already logged in
+        if (localStorage.getItem('userSession') || sessionStorage.getItem('userSession')) {
+            window.location.href = 'index.html';
+        }
+
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const rememberMe = document.getElementById('rememberMe').checked;
+            const loginBtn = document.getElementById('loginBtn');
+            const loading = document.getElementById('loading');
+            
+            // Clear previous alerts
+            document.getElementById('alert-container').innerHTML = '';
+            
+            // Basic validation
+            if (!username || !password) {
+                showAlert('Please enter both username/email and password', 'error');
+                return;
+            }
+            
+            // Show loading
+            loginBtn.disabled = true;
+            loading.style.display = 'block';
+            
+            // Simulate server delay
+            setTimeout(() => {
+                // Check credentials against demo users and registered users
+                let user = demoUsers.find(u => 
+                    (u.username === username || u.email === username) && u.password === password
+                );
+                
+                // Also check registered users from localStorage
+                if (!user) {
+                    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+                    user = registeredUsers.find(u => 
+                        (u.username === username || u.email === username) && u.password === password
+                    );
+                }
+                
+                if (user) {
+                    // Login successful
+                    const sessionData = {
+                        userId: user.id,
+                        username: user.username,
+                        email: user.email,
+                        fullName: user.fullName,
+                        loginTime: new Date().toISOString(),
+                        rememberMe: rememberMe
+                    };
+                    
+                    if (rememberMe) {
+                        localStorage.setItem('userSession', JSON.stringify(sessionData));
+                    } else {
+                        sessionStorage.setItem('userSession', JSON.stringify(sessionData));
+                    }
+                    
+                    showAlert('Login successful! Welcome back, ' + user.fullName, 'success');
+                    
+                    // Redirect after 1.5 seconds
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 1500);
+                    
+                } else {
+                    // Login failed
+                    showAlert('Invalid username/email or password. Please try again.', 'error');
+                    loginBtn.disabled = false;
+                    loading.style.display = 'none';
+                    
+                    // Clear password field
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }
+            }, 1000);
+        });
+        
+        // Show alert function
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alert-container');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            
+            const icon = type === 'error' ? 'fas fa-exclamation-circle' : 'fas fa-check-circle';
+            alertDiv.innerHTML = `<i class="${icon}"></i> ${message}`;
+            
+            alertContainer.appendChild(alertDiv);
+            
+            // Auto-remove after 5 seconds for error messages
+            if (type === 'error') {
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, 5000);
+            }
+        }
+        
+        // Forgot password function
+        function forgotPassword() {
+            const email = prompt('Please enter your email address:');
+            if (email && email.includes('@')) {
+                alert('Password reset instructions have been sent to ' + email + '\n\n(This is a demo - no actual email was sent)');
+            } else if (email) {
+                alert('Please enter a valid email address');
+            }
+        }
+        
+        // Auto-focus on username field
+        document.getElementById('username').focus();
+        
+        console.log('User login page loaded');
+    </script>
+</body>
+</html>
