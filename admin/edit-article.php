@@ -1,9 +1,4 @@
 <?php
-// --- Database Configuration ---
-$servername = "localhost";
-$username = "root";
-$password = ""; 
-$dbname = "news_db"; 
 
 // Variables to store alert messages
 $success_message = "";

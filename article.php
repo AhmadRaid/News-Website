@@ -61,7 +61,7 @@ if ($conn->connect_error) {
                 $article = $result_article->fetch_assoc();
             } else {
                 // Article not found
-                header("Location: index.php");
+                header("Location: get_articles.php");
                 exit();
             }
             $stmt->close();
@@ -129,7 +129,7 @@ if ($conn->connect_error) {
             error_log("Error fetching comments: " . $conn->error);
         }
     } else {
-        header("Location: index.php");
+        header("Location: get_articles.php");
         exit();
     }
 
@@ -295,7 +295,7 @@ if ($conn->connect_error) {
             <div class="header-top">
                 <div class="logo">
                     <i class="fas fa-globe"></i>
-                    <a href="index.php">Global News Network</a>
+                    <a href="get_articles.php">Global News Network</a>
                 </div>
                 <div class="header-controls">
                     <div class="search-container">
@@ -326,7 +326,7 @@ if ($conn->connect_error) {
             </div>
             <nav>
                 <ul>
-                    <li><a href="index.php">Home</a></li>
+                    <li><a href="get_articles.php">Home</a></li>
                     <li><a href="category.php?cat_id=1">Politics</a></li>
                     <li><a href="category.php?cat_id=2">Technology</a></li>
                     <li><a href="category.php?cat_id=3">Sports</a></li>
@@ -354,9 +354,16 @@ if ($conn->connect_error) {
                             <span><i class="fas fa-clock"></i> <?php echo date("F j, Y, g:i a", strtotime($article['published_date'])); ?></span>
                         </div>
                     </div>
-                    <?php if (!empty($article['image_url'])): ?>
-                        <img src="<?php echo htmlspecialchars($article['image_url']); ?>" alt="<?php echo htmlspecialchars($article['title']); ?>">
-                    <?php endif; ?>
+                 <?php if (!empty($article['image_url'])) {
+    $article['image_url'] = 'admin/uploads/' . basename($article['image_url']);
+} ?>
+    <?php 
+    // تحويل المسار إلى المسار الصحيح بناء على هيكل المجلدات
+    $image_path = str_replace('http://' . $_SERVER['HTTP_HOST'] . '/', '', $article['image_url']);
+    $image_path = str_replace('admin/uploads/', 'admin/uploads/', $image_path);
+    $full_image_path = 'admin/uploads/' . basename($image_path);
+    ?>
+  <img src="<?php echo htmlspecialchars($article['image_url']); ?>" alt="<?php echo htmlspecialchars($article['title']); ?>">
                     <div class="article-content-full">
                         <?php echo nl2br(htmlspecialchars($article['content'])); ?>
                     </div>
@@ -399,7 +406,7 @@ if ($conn->connect_error) {
                 <div class="article-detail-container">
                     <h1>Article Not Found</h1>
                     <p>The article you are looking for does not exist or has been removed.</p>
-                    <p><a href="index.php">Go back to Homepage</a></p>
+                    <p><a href="get_articles.php">Go back to Homepage</a></p>
                 </div>
             <?php endif; ?>
         </main>
@@ -427,7 +434,7 @@ if ($conn->connect_error) {
                 <div class="footer-section">
                     <h3>Quick Links</h3>
                     <ul>
-                        <li><a href="index.php">Home</a></li>
+                        <li><a href="get_articles.php">Home</a></li>
                         <li><a href="category.php?cat_id=1">Politics</a></li>
                         <li><a href="category.php?cat_id=2">Technology</a></li>
                         <li><a href="category.php?cat_id=3">Sports</a></li>

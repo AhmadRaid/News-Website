@@ -1,5 +1,5 @@
 <?php
-session_start(); // Start the session to track user login status
+session_start();
 
 // --- Database Configuration ---
 $servername = "localhost";
@@ -18,7 +18,7 @@ if ($conn->connect_error) {
     $conn->set_charset("utf8mb4");
 
     $category_id = null;
-    $category_name = "All Articles"; // Default title
+    $category_name = "All Articles";
 
     // Check if a category ID is provided in the URL
     if (isset($_GET['cat_id']) && is_numeric($_GET['cat_id'])) {
@@ -32,16 +32,12 @@ if ($conn->connect_error) {
         if ($row_cat = $result_cat->fetch_assoc()) {
             $category_name = htmlspecialchars($row_cat['category_name']);
         } else {
-            // Category not found
             $category_name = "Category Not Found";
-            // Optionally redirect to an error page or home
-            // header("Location: index.php");
-            // exit();
         }
         $stmt_cat->close();
     }
 
-    // --- Fetch Articles for the Selected Category (or all if no ID) ---
+    // --- Fetch Articles for the Selected Category ---
     $articles = [];
     $sql_articles = "SELECT 
                         a.article_id, 
@@ -58,7 +54,6 @@ if ($conn->connect_error) {
                     LEFT JOIN 
                         users u ON a.author_id = u.user_id";
     
-    // Add WHERE clause if a specific category_id is provided
     if ($category_id !== null) {
         $sql_articles .= " WHERE a.category_id = ?";
     }
@@ -77,6 +72,10 @@ if ($conn->connect_error) {
     if ($result_articles) {
         if ($result_articles->num_rows > 0) {
             while($row = $result_articles->fetch_assoc()) {
+                // تعديل مسار الصورة ليعكس الهيكل الحالي للمجلدات
+                if (!empty($row['image_url'])) {
+                    $row['image_url'] = 'admin/uploads/' . basename($row['image_url']);
+                }
                 $articles[] = $row;
             }
         }
@@ -99,13 +98,15 @@ if ($conn->connect_error) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* Add specific styles for category page if needed, e.g., article grid */
         .category-articles-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
             padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
+        
         .category-articles-grid .article-card {
             border: 1px solid var(--border-color);
             border-radius: 8px;
@@ -116,34 +117,40 @@ if ($conn->connect_error) {
             display: flex;
             flex-direction: column;
         }
+        
         .category-articles-grid .article-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
+        
         .category-articles-grid .article-image {
             width: 100%;
-            height: 200px; /* Fixed height for consistency */
+            height: 200px;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             background-color: var(--light-bg);
         }
+        
         .category-articles-grid .article-image img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Cover the area, cropping if necessary */
+            object-fit: cover;
         }
+        
         .category-articles-grid .article-image .fas {
             font-size: 4rem;
             color: var(--text-muted);
         }
+        
         .category-articles-grid .article-content {
             padding: 15px;
             flex-grow: 1;
             display: flex;
             flex-direction: column;
         }
+        
         .category-articles-grid .article-category {
             display: inline-block;
             background-color: var(--primary-color);
@@ -153,42 +160,50 @@ if ($conn->connect_error) {
             font-size: 0.8em;
             margin-bottom: 10px;
         }
+        
         .category-articles-grid .article-title {
             font-size: 1.2em;
             margin-bottom: 10px;
             color: var(--text-color);
         }
+        
         .category-articles-grid .article-excerpt {
             font-size: 0.9em;
             color: var(--text-muted);
             margin-bottom: 15px;
-            flex-grow: 1; /* Allows excerpt to take available space */
+            flex-grow: 1;
         }
+        
         .category-articles-grid .article-meta {
             font-size: 0.8em;
             color: var(--text-light);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: auto; /* Pushes meta to the bottom */
+            margin-top: auto;
         }
-        .category-articles-grid .article-meta span {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
+        
         .main-category-heading {
             text-align: center;
             margin: 30px 0;
             color: var(--heading-color);
             font-size: 2.5em;
+            padding: 0 20px;
+        }
+        
+        .no-articles {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-top: 50px;
+            font-size: 1.2em;
+            color: var(--text-muted);
         }
 
-        /* Responsive adjustments */
         @media (max-width: 768px) {
             .category-articles-grid {
-                grid-template-columns: 1fr; /* Single column on smaller screens */
+                grid-template-columns: 1fr;
             }
+            
             .main-category-heading {
                 font-size: 2em;
             }
@@ -201,7 +216,7 @@ if ($conn->connect_error) {
             <div class="header-top">
                 <div class="logo">
                     <i class="fas fa-globe"></i>
-                    <a href="index.php">Global News Network</a>
+                    <a href="get_articles.php">Global News Network</a>
                 </div>
                 
                 <div class="header-controls">
@@ -236,14 +251,14 @@ if ($conn->connect_error) {
             
             <nav>
                 <ul>
-                    <li><a href="index.php">Home</a></li>
+                    <li><a href="get_articles.php">Home</a></li>
                     <li><a href="category.php?cat_id=1" <?php if ($category_id == 1) echo 'class="active"'; ?>>Politics</a></li>
                     <li><a href="category.php?cat_id=2" <?php if ($category_id == 2) echo 'class="active"'; ?>>Technology</a></li>
                     <li><a href="category.php?cat_id=3" <?php if ($category_id == 3) echo 'class="active"'; ?>>Sports</a></li>
                     <li><a href="category.php?cat_id=4" <?php if ($category_id == 4) echo 'class="active"'; ?>>Entertainment</a></li>
                     <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                     <li id="adminNavLink">
-                        <a href="./admin/index.php" class="admin-nav-link">
+                        <a href="./admin/get_articles.php" class="admin-nav-link">
                              <i class="fas fa-cog"></i> Admin Panel
                         </a>
                     </li>
@@ -261,7 +276,7 @@ if ($conn->connect_error) {
                 <?php foreach ($articles as $article): ?>
                     <article class="article-card" onclick="location.href='article.php?id=<?php echo htmlspecialchars($article['article_id']); ?>'">
                         <div class="article-image">
-                            <?php if (!empty($article['image_url'])): ?>
+                            <?php if (!empty($article['image_url']) && file_exists($article['image_url'])): ?>
                                 <img src="<?php echo htmlspecialchars($article['image_url']); ?>" alt="<?php echo htmlspecialchars($article['title']); ?>">
                             <?php else: ?>
                                 <i class="fas fa-newspaper"></i>
@@ -279,7 +294,7 @@ if ($conn->connect_error) {
                     </article>
                 <?php endforeach; ?>
             <?php else: ?>
-                <p style="grid-column: 1 / -1; text-align: center; margin-top: 50px; font-size: 1.2em; color: var(--text-muted);">No articles found for this category.</p>
+                <p class="no-articles">No articles found for this category.</p>
             <?php endif; ?>
         </section>
     </div>
@@ -302,7 +317,7 @@ if ($conn->connect_error) {
                 <div class="footer-section">
                     <h3>Quick Links</h3>
                     <ul>
-                        <li><a href="index.php">Home</a></li>
+                        <li><a href="get_articles.php">Home</a></li>
                         <li><a href="category.php?cat_id=1">Politics</a></li>
                         <li><a href="category.php?cat_id=2">Technology</a></li>
                         <li><a href="category.php?cat_id=3">Sports</a></li>
@@ -335,7 +350,6 @@ if ($conn->connect_error) {
         </div>
     </footer>
 
-    <script src="script.js"></script>
     <script>
         // User authentication functions
         function showLogin() {
@@ -350,10 +364,6 @@ if ($conn->connect_error) {
             if (confirm('Are you sure you want to log out?')) {
                 window.location.href = 'logout.php'; 
             }
-        }
-
-        function viewProfile() {
-            alert('Profile page will be added here later.');
         }
 
         // Search functionality

@@ -297,7 +297,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
         <div class="header">
             <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
             <p>Welcome, <?php echo htmlspecialchars($_SESSION['username'] ?? 'Admin'); ?>! Here's an overview of your news site.</p>
-            <a href="../index.php" class="btn">View Website</a>
+            <a href="../get_articles.php" class="btn">View Website</a>
             <a href="logout.php" class="btn">Logout</a>
         </div>
 

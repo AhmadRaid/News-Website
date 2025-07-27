@@ -23,7 +23,6 @@ if ($conn->connect_error) {
         $search_query = $_GET['q'];
 
         // Prepare the SQL statement to prevent SQL injection
-        // Search for articles where the title contains the search term (case-insensitive)
         $sql_search = "SELECT
                             a.article_id,
                             a.title,
@@ -53,6 +52,10 @@ if ($conn->connect_error) {
 
             if ($result_search->num_rows > 0) {
                 while($row = $result_search->fetch_assoc()) {
+                    // تعديل مسار الصورة ليعكس الهيكل الحالي للمجلدات
+                    if (!empty($row['image_url'])) {
+                        $row['image_url'] = 'admin/uploads/' . basename($row['image_url']);
+                    }
                     $search_results[] = $row;
                 }
             }
@@ -76,7 +79,6 @@ if ($conn->connect_error) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* Add some basic styling for search results if not already in styles.css */
         .search-results-container {
             width: 80%;
             margin: 2rem auto;
@@ -202,7 +204,7 @@ if ($conn->connect_error) {
             <div class="header-top">
                 <div class="logo">
                     <i class="fas fa-globe"></i>
-                    <a href="index.php">Global News Network</a>
+                    <a href="get_articles.php">Global News Network</a>
                 </div>
                 <div class="header-controls">
                     <div class="search-container">
@@ -220,7 +222,7 @@ if ($conn->connect_error) {
             </div>
             <nav>
                 <ul>
-                    <li><a href="index.php">Home</a></li>
+                    <li><a href="get_articles.php">Home</a></li>
                     <li><a href="category.php?cat_id=1">Politics</a></li>
                     <li><a href="category.php?cat_id=2">Technology</a></li>
                     <li><a href="category.php?cat_id=3">Sports</a></li>
@@ -246,7 +248,7 @@ if ($conn->connect_error) {
                         <?php foreach ($search_results as $article): ?>
                             <article class="article-card" onclick="location.href='article.php?id=<?php echo htmlspecialchars($article['article_id']); ?>'">
                                 <div class="article-image">
-                                    <?php if (!empty($article['image_url'])): ?>
+                                    <?php if (!empty($article['image_url']) && file_exists($article['image_url'])): ?>
                                         <img src="<?php echo htmlspecialchars($article['image_url']); ?>" alt="<?php echo htmlspecialchars($article['title']); ?>">
                                     <?php else: ?>
                                         <i class="fas fa-newspaper"></i>
@@ -271,9 +273,6 @@ if ($conn->connect_error) {
         </main>
         
         <aside class="sidebar">
-          
-
-
             <section class="ad-section">
                 <h3>Advertisement</h3>
                 <p>Your ad could be here!</p>
@@ -312,7 +311,7 @@ if ($conn->connect_error) {
                 <div class="footer-section">
                     <h3>Quick Links</h3>
                     <ul>
-                        <li><a href="index.php">Home</a></li>
+                        <li><a href="get_articles.php">Home</a></li>
                         <li><a href="category.php?cat_id=1">Politics</a></li>
                         <li><a href="category.php?cat_id=2">Technology</a></li>
                         <li><a href="category.php?cat_id=3">Sports</a></li>
@@ -345,14 +344,12 @@ if ($conn->connect_error) {
         </div>
     </footer>
 
-    <script src="script.js"></script>
     <script>
         // Check user login status and update navigation
         function checkUserLoginStatus() {
             const userSession = localStorage.getItem('userSession') || sessionStorage.getItem('userSession');
             const adminSession = localStorage.getItem('adminLoggedIn');
             const authButtons = document.getElementById('authButtons');
-            const userProfileSection = document.getElementById('userProfileSection');
             const adminNavLink = document.getElementById('adminNavLink');
 
             if (userSession) {
@@ -364,12 +361,6 @@ if ($conn->connect_error) {
                         <i class="fas fa-sign-out-alt"></i> Sign Out
                     </button>
                 `;
-                
-                // Show user profile in sidebar
-                userProfileSection.style.display = 'block';
-                document.getElementById('userDisplayName').textContent = user.fullName;
-                document.getElementById('userEmail').textContent = user.email;
-                
             } else {
                 // User is not logged in
                 authButtons.innerHTML = `
@@ -380,8 +371,6 @@ if ($conn->connect_error) {
                         <i class="fas fa-user-plus"></i> Register
                     </button>
                 `;
-                
-                userProfileSection.style.display = 'none';
             }
             
             // Show admin link if admin is logged in
@@ -405,45 +394,19 @@ if ($conn->connect_error) {
             if (confirm('Are you sure you want to sign out?')) {
                 localStorage.removeItem('userSession');
                 sessionStorage.removeItem('userSession');
-                localStorage.removeItem('adminLoggedIn'); // Also log out admin if admin
-                alert('You have been signed out successfully!');
-                checkUserLoginStatus(); // Update UI after logout
-                window.location.href = 'index.php'; // Redirect to homepage
+                localStorage.removeItem('adminLoggedIn');
+                checkUserLoginStatus();
+                window.location.href = 'get_articles.php';
             }
-        }
-
-        function viewProfile() {
-            alert('Profile page would be implemented here');
         }
 
         // Newsletter subscription
-        function subscribeNewsletter(event) {
-            event.preventDefault();
-            const email = document.getElementById('newsletterEmail').value;
-            const successMsg = document.getElementById('newsletterSuccess');
-            
-            // Simple validation
-            if (email && email.includes('@')) {
-                // In a real application, you'd send this email to a server-side script
-                // to save it to your database or mailing list service.
-                successMsg.style.display = 'block';
-                document.getElementById('newsletterEmail').value = '';
-                
-                setTimeout(() => {
-                    successMsg.style.display = 'none';
-                }, 5000); // Hide after 5 seconds
-            } else {
-                alert('Please enter a valid email address');
-            }
-        }
-
         function quickSubscribe(event) {
             event.preventDefault();
             const form = event.target;
             const email = form.querySelector('input[type="email"]').value;
             
             if (email && email.includes('@')) {
-                // In a real application, you'd send this email to a server-side script
                 alert('Thank you for subscribing!');
                 form.reset();
             } else {

@@ -61,7 +61,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $success_message = "Login successful! Redirecting to admin panel...";
                 
                 // Redirect to admin dashboard after a short delay (for user to see success message)
-                header("Refresh: 1.5; URL=index.php"); // Adjust this path if your admin dashboard is elsewhere
+                header("Refresh: 1.5; URL=get_articles.php"); // Adjust this path if your admin dashboard is elsewhere
                 exit();
             } else {
                 // Password incorrect or not an admin
@@ -344,7 +344,7 @@ if (isset($conn) && $conn instanceof mysqli) {
         </form>
 
         <div class="back-link">
-            <a href="index.php">
+            <a href="get_articles.php">
                 <i class="fas fa-arrow-left"></i> Back to Website
             </a>
             <a href="user-login.php">User Login</a>

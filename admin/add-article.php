@@ -1,9 +1,4 @@
 <?php
-// --- Database Configuration ---
-$servername = "localhost";
-$username = "root";
-$password = ""; 
-$dbname = "news_db"; 
 
 // Variables to store alert messages
 $success_message = "";
@@ -23,48 +18,92 @@ if ($conn->connect_error) {
     if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $title = isset($_POST['title']) ? trim($_POST['title']) : '';
         $content = isset($_POST['content']) ? trim($_POST['content']) : '';
-        $image_url = isset($_POST['imageUrl']) ? trim($_POST['imageUrl']) : '';
         $category_id = isset($_POST['category']) ? (int)$_POST['category'] : null;
         
-        // --- IMPORTANT CHANGE HERE ---
-        // Instead of directly taking author_id from $_POST, we are hardcoding it to 2.
-        // If you need it to be dynamic based on a logged-in user,
-        // you'll need a proper login system that stores user ID in a session.
-        $author_id = 2; // Hardcoded author ID for demonstration.
-        // --- END IMPORTANT CHANGE ---
-
+        $author_id = 2; // Hardcoded author ID
         $published_date = date('Y-m-d H:i:s');
+
+        // Initialize image URL
+        $image_url = '';
+
+        // Process uploaded file
+        if (isset($_FILES['imageUpload']) && $_FILES['imageUpload']['error'] == UPLOAD_ERR_OK) {
+            // Create upload directory if not exists
+            $upload_dir = 'uploads/';
+            if (!file_exists($upload_dir)) {
+                if (!mkdir($upload_dir, 0755, true)) {
+                    $error_message = 'Failed to create upload directory.';
+                }
+            }
+            
+            // Get file info
+            $file_name = $_FILES['imageUpload']['name'];
+            $file_tmp = $_FILES['imageUpload']['tmp_name'];
+            $file_size = $_FILES['imageUpload']['size'];
+            $file_error = $_FILES['imageUpload']['error'];
+            
+            // Get file extension
+            $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+            
+            // Allowed file types
+            $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+            
+            // Validate file
+            if (in_array($file_ext, $allowed)) {
+                if ($file_error === 0) {
+                    if ($file_size <= 5 * 1024 * 1024) { // 5MB max
+                        // Generate unique filename
+                        $new_file_name = uniqid('', true) . '.' . $file_ext;
+                        $file_destination = $upload_dir . $new_file_name;
+                        
+                        // Move uploaded file
+                        if (move_uploaded_file($file_tmp, $file_destination)) {
+                            $image_url = (isset($_SERVER['HTTPS']) ? 'https://' : 'http://') . 
+                                         $_SERVER['HTTP_HOST'] . '/' . $file_destination;
+                        } else {
+                            $error_message = 'Failed to move uploaded file.';
+                        }
+                    } else {
+                        $error_message = 'File size is too large (max 5MB).';
+                    }
+                } else {
+                    $error_message = 'Error uploading file.';
+                }
+            } else {
+                $error_message = 'Invalid file type. Only JPG, JPEG, PNG & GIF are allowed.';
+            }
+        } else {
+            $error_message = 'Please select an image to upload.';
+        }
 
         // Basic data validation
         if (empty($title) || empty($content) || empty($category_id)) {
             $error_message = 'Please fill in all required fields (Title, Content, Category).';
-        } else {
-            // Check if author_id is valid (not null and greater than 0)
-            if ($author_id === null || $author_id <= 0) {
-                // This error message will likely not be triggered now because author_id is hardcoded to 2.
-                $error_message = 'Error: Author ID not specified correctly.';
+        }
+
+        // If no errors, proceed with database insertion
+        if (empty($error_message)) {
+            $stmt = $conn->prepare("INSERT INTO articles (title, content, image_url, category_id, author_id, published_date) VALUES (?, ?, ?, ?, ?, ?)");
+
+            if ($stmt === false) {
+                error_log("MySQL prepare error: " . $conn->error);
+                $error_message = 'Failed to prepare database statement.';
             } else {
-                $stmt = $conn->prepare("INSERT INTO articles (title, content, image_url, category_id, author_id, published_date) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("sssiis", $title, $content, $image_url, $category_id, $author_id, $published_date);
 
-                if ($stmt === false) {
-                    error_log("MySQL prepare error: " . $conn->error);
-                    $error_message = 'Failed to prepare database statement.';
+                if ($stmt->execute()) {
+                    $success_message = 'Article added successfully!';
+                    $_POST = array(); // Clear form data
                 } else {
-                    $stmt->bind_param("sssiis", $title, $content, $image_url, $category_id, $author_id, $published_date);
-
-                    if ($stmt->execute()) {
-                        $success_message = 'Article added successfully!';
-                        $_POST = array(); // Clears POST data to empty the form
-                    } else {
-                        error_log("Error executing statement: " . $stmt->error);
-                        $error_message = 'Failed to add article: ' . $stmt->error;
-                    }
-                    $stmt->close();
+                    error_log("Error executing statement: " . $stmt->error);
+                    $error_message = 'Failed to add article: ' . $stmt->error;
                 }
+                $stmt->close();
             }
         }
     }
 }
+
 if ($conn && !$conn->connect_error) {
     $conn->close();
 }
@@ -135,6 +174,12 @@ if ($conn && !$conn->connect_error) {
         textarea {
             min-height: 200px;
             resize: vertical;
+        }
+        
+        #imagePreview {
+            max-width: 100%;
+            margin-top: 10px;
+            display: none;
         }
         
         .btn {
@@ -229,7 +274,7 @@ if ($conn && !$conn->connect_error) {
             </div>
             <?php endif; ?>
 
-            <form id="articleForm" method="POST" action=""> 
+            <form id="articleForm" method="POST" action="" enctype="multipart/form-data"> 
                 <div class="form-group">
                     <label for="title">Article Title <span class="required">*</span></label>
                     <input type="text" id="title" name="title" placeholder="Enter article title" 
@@ -247,14 +292,6 @@ if ($conn && !$conn->connect_error) {
                             <option value="4" <?php echo (($_POST['category'] ?? '') == '4') ? 'selected' : ''; ?>>Entertainment</option>
                         </select>
                     </div>
-                    
-                </div>
-
-                <div class="form-group">
-                    <label for="excerpt">Article Excerpt <span class="required">*</span></label>
-                    <textarea id="excerpt" name="excerpt" placeholder="Write a brief summary of your article..." 
-                                     required minlength="50" maxlength="300"><?php echo htmlspecialchars($_POST['excerpt'] ?? ''); ?></textarea>
-                    <small style="color: #666;">Brief summary to appear in article previews (50-300 characters)</small>
                 </div>
 
                 <div class="form-group">
@@ -265,10 +302,10 @@ if ($conn && !$conn->connect_error) {
                 </div>
 
                 <div class="form-group">
-                    <label for="imageUrl">Featured Image URL</label>
-                    <input type="url" id="imageUrl" name="imageUrl" placeholder="https://example.com/image.jpg"
-                           value="<?php echo htmlspecialchars($_POST['imageUrl'] ?? ''); ?>">
-                    <small style="color: #666;">Optional: URL for the featured image of your article</small>
+                    <label for="imageUpload">Featured Image <span class="required">*</span></label>
+                    <input type="file" id="imageUpload" name="imageUpload" accept="image/jpeg, image/png, image/gif" required>
+                    <small style="color: #666;">Select an image to upload (JPG, PNG, GIF - max 5MB)</small>
+                    <img id="imagePreview" src="#" alt="Image Preview" style="max-width: 300px; display: none; margin-top: 10px;">
                 </div>
 
                 <input type="hidden" id="authorId" name="authorId" value="2"> 
@@ -276,9 +313,6 @@ if ($conn && !$conn->connect_error) {
                 <div class="form-group" style="margin-top: 30px;">
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-save"></i> Save Article
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="previewArticle()">
-                        <i class="fas fa-eye"></i> Preview
                     </button>
                     <button type="reset" class="btn btn-secondary">
                         <i class="fas fa-undo"></i> Reset Form
@@ -289,22 +323,37 @@ if ($conn && !$conn->connect_error) {
     </div>
 
     <script>
-        // The checkLoginStatus function is now largely irrelevant because author_id is hardcoded in PHP.
-        // It's kept here for completeness if you decide to revert to dynamic author IDs later.
-        function checkLoginStatus() {
-            const userSession = localStorage.getItem('userSession') || sessionStorage.getItem('userSession');
-            if (userSession) {
-                try {
-                    const parsedSession = JSON.parse(userSession);
-                    // This line will still try to set the value, but PHP will override it.
-                    document.getElementById('authorId').value = parsedSession.userId || ''; 
-                } catch (e) {
-                    console.error("Error parsing userSession:", e);
-                    document.getElementById('authorId').value = '';
+        // Preview image when selected
+        document.getElementById('imageUpload').addEventListener('change', function() {
+            const file = this.files[0];
+            const preview = document.getElementById('imagePreview');
+            
+            if (file) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
                 }
+                
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
             }
+        });
+
+        // Form validation
+        document.getElementById('articleForm').addEventListener('submit', function(e) {
+            const fileInput = document.getElementById('imageUpload');
+            
+            if (fileInput.files.length === 0) {
+                alert('Please select an image to upload');
+                e.preventDefault();
+                return false;
+            }
+            
             return true;
-        }
+        });
 
         function showSuccess(message) {
             document.getElementById('successMessage').textContent = message;
@@ -327,56 +376,7 @@ if ($conn && !$conn->connect_error) {
             document.getElementById('errorAlert').style.display = 'none';
         }
 
-        function previewArticle() {
-            const title = document.getElementById('title').value.trim();
-            const content = document.getElementById('content').value.trim();
-            
-            if (!title || !content) {
-                showError('Please fill in the title and content to preview the article.');
-                return;
-            }
-            
-            const previewWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
-            previewWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Article Preview</title>
-                    <style>
-                        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-                        h1 { color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
-                        .meta { color: #666; margin-bottom: 20px; }
-                        .content { line-height: 1.6; }
-                        .preview-note { background: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="preview-note">
-                        <strong>Preview Mode:</strong> This is how your article will appear to readers.
-                    </div>
-                    <h1>${title}</h1>
-                    <div class="meta">
-                        <strong>Category:</strong> ${document.getElementById('category').options[document.getElementById('category').selectedIndex].text || 'Not Selected'} |
-                        <strong>Status:</strong> ${document.getElementById('status').value}
-                    </div>
-                    <div class="content">
-                        ${content.replace(/\n/g, '<br>')}
-                    </div>
-                </body>
-                </html>
-            `);
-        }
-
-        document.getElementById('articleForm').addEventListener('submit', function(e) {
-            if (!this.checkValidity()) {
-                e.preventDefault();
-                showError('Please fill in all required fields correctly.');
-                return;
-            }
-        });
-
         window.onload = function() {
-            checkLoginStatus(); // Still calls this, but its effect on authorId is nullified by PHP hardcoding.
             <?php if (!$success_message && !$error_message): ?>
             hideMessages();
             <?php endif; ?>

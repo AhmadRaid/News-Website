@@ -376,7 +376,7 @@ $conn->close();
 
         <div class="links">
             <a href="user-login.php">Already have an account? Log In</a>
-            <a href="index.php">Back to Website</a>
+            <a href="get_articles.php">Back to Website</a>
         </div>
     </div>
 

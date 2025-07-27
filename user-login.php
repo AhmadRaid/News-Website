@@ -26,7 +26,7 @@ $alert_type = ''; // 'success' or 'error'
 
 // Check if the user is already logged in
 if (isset($_SESSION['user_id'])) {
-    header("Location: index.php"); // Redirect to home page if already logged in
+    header("Location: get_articles.php"); // Redirect to home page if already logged in
     exit();
 }
 
@@ -86,7 +86,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     // Redirect to the home page after a short delay
                     echo "<script>
                                 setTimeout(function() {
-                                    window.location.href = 'index.php';
+                                    window.location.href = 'get_articles.php';
                                 }, 1500);
                               </script>";
                 } else {
@@ -399,7 +399,7 @@ $conn->close();
         </div>
 
         <div class="links">
-            <a href="index.php">
+            <a href="get_articles.php">
                 <i class="fas fa-arrow-left"></i> Back to Website
             </a>
             <a href="./admin/login.php">Admin Login</a>
