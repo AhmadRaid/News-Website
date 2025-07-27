@@ -228,7 +228,7 @@ if ($conn->connect_error) {
                     <li><a href="#about">About Us</a></li>
                     <li><a href="#contact">Contact</a></li>
                     <li id="adminNavLink" style="display: none;">
-                        <a href="admin-login.html" class="admin-nav-link">
+                        <a href="admin-login.php" class="admin-nav-link">
                             <i class="fas fa-cog"></i> Admin
                         </a>
                     </li>
@@ -271,50 +271,8 @@ if ($conn->connect_error) {
         </main>
         
         <aside class="sidebar">
-            <section class="sidebar-section">
-                <h3 class="section-title">Trending Now</h3>
-                <div class="trending-list">
-                    <?php
-                    // Re-fetch trending articles for the sidebar if needed, or pass them from index.php if search.php is included
-                    // For simplicity, we'll assume a basic inclusion or re-fetch for this example.
-                    // In a more complex setup, you might have a shared header/footer file.
-                    // For now, let's just make sure it's available or remove it if not critical to search.php
-                    // For this example, I'll omit the dynamic trending data to keep search.php focused,
-                    // but you can add similar PHP logic here as in index.php if you want it populated.
-                    ?>
-                    <?php if (isset($trending_articles) && !empty($trending_articles)): ?>
-                        <?php $i = 1; ?>
-                        <?php foreach ($trending_articles as $article): ?>
-                            <article class="trending-item" onclick="location.href='article.php?id=<?php echo htmlspecialchars($article['article_id']); ?>'">
-                                <div class="trending-number"><?php echo $i++; ?></div>
-                                <div>
-                                    <h4><?php echo htmlspecialchars($article['title']); ?></h4>
-                                    <span class="news-time"><?php echo date("F j, Y", strtotime($article['published_date'])); ?></span>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p>No trending articles found.</p>
-                    <?php endif; ?>
-                </div>
-            </section>
+          
 
-            <section class="sidebar-section" id="userProfileSection" style="display: none;">
-                <h3 class="section-title">My Profile</h3>
-                <div class="user-profile-card">
-                    <div class="user-avatar">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <div class="user-info">
-                        <h4 id="userDisplayName">User Name</h4>
-                        <p id="userEmail">user@example.com</p>
-                        <div class="user-actions">
-                            <button onclick="viewProfile()" class="profile-btn">View Profile</button>
-                            <button onclick="userLogout()" class="logout-btn">Sign Out</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             <section class="ad-section">
                 <h3>Advertisement</h3>

@@ -1,4 +1,6 @@
 <?php
+// Start session
+session_start();
 
 // Create database connection
 $conn = new mysqli("localhost:8111", "root", "", "news_db");
@@ -14,9 +16,28 @@ if ($conn->connect_error) {
     $comments = [];
     $article_id = isset($_GET['id']) ? intval($_GET['id']) : 0; // Get article ID from URL
 
+    // Check if user is logged in
+    $user_id = null;
+    $is_logged_in = false;
+    $username = 'Anonymous';
+
+    if (isset($_COOKIE['userSession'])) {
+        $userSession = json_decode($_COOKIE['userSession'], true);
+        if ($userSession && isset($userSession['user_id'])) {
+            $user_id = $userSession['user_id'];
+            $username = $userSession['username'] ?? 'User';
+            $is_logged_in = true;
+        }
+    }
+    // Fallback for PHP session
+    elseif (isset($_SESSION['user_id'])) {
+        $user_id = $_SESSION['user_id'];
+        $username = $_SESSION['username'] ?? 'User';
+        $is_logged_in = true;
+    }
+
     if ($article_id > 0) {
         // --- Fetch Article Details ---
-        // Removed `u.username AS author_name` from SELECT statement and the JOIN
         $sql_article = "SELECT
                             a.article_id,
                             a.title,
@@ -40,7 +61,7 @@ if ($conn->connect_error) {
                 $article = $result_article->fetch_assoc();
             } else {
                 // Article not found
-                header("Location: index.php"); // Redirect to home or 404 page
+                header("Location: index.php");
                 exit();
             }
             $stmt->close();
@@ -51,30 +72,18 @@ if ($conn->connect_error) {
         // --- Handle Comment Submission ---
         if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_comment'])) {
             $comment_text = trim($_POST['comment_text']);
-            $user_id = 2; // Default to null for non-logged-in users
-
-            // Check if a user is logged in (using cookie for userSession)
-            if (isset($_COOKIE['userSession'])) {
-                $userSession = json_decode($_COOKIE['userSession'], true);
-                if ($userSession && isset($userSession['user_id'])) {
-                    $user_id = $userSession['user_id'];
-                }
+            
+            if (!$is_logged_in) {
+                $comment_error = "You must be logged in to post a comment.";
             }
-            // Fallback for PHP session if used (e.g., if you switched from localStorage/cookie to server-side sessions)
-            elseif (isset($_SESSION['user_id'])) {
-                $user_id = 2;
-            }
-
-            if (!empty($comment_text) && $article_id > 0) {
-                // Modified INSERT statement: removed `author_name` field and its corresponding value
+            elseif (!empty($comment_text) && $article_id > 0) {
                 $sql_insert_comment = "INSERT INTO comments (article_id, user_id, comment_text) VALUES (?, ?, ?)";
                 $stmt_insert = $conn->prepare($sql_insert_comment);
                 if ($stmt_insert) {
-                    // Note the binding parameters are now "iis" (integer, integer, string)
                     $stmt_insert->bind_param("iis", $article_id, $user_id, $comment_text);
-
+                    
                     if ($stmt_insert->execute()) {
-                        // Comment added successfully, redirect to prevent resubmission on refresh
+                        // Comment added successfully
                         header("Location: article.php?id=" . $article_id . "#comments");
                         exit();
                     } else {
@@ -92,7 +101,6 @@ if ($conn->connect_error) {
         }
 
         // --- Fetch Comments for the Article ---
-        // Modified to display username from 'users' table or 'Anonymous' if no user_id
         $sql_comments = "SELECT
                             com.comment_id,
                             com.comment_text,
@@ -121,7 +129,7 @@ if ($conn->connect_error) {
             error_log("Error fetching comments: " . $conn->error);
         }
     } else {
-        header("Location: index.php"); // No article ID provided, redirect to home
+        header("Location: index.php");
         exit();
     }
 
@@ -139,7 +147,6 @@ if ($conn->connect_error) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <style>
-        /* Add specific styles for article.php if needed */
         .article-detail-container {
             display: flex;
             flex-direction: column;
@@ -207,8 +214,6 @@ if ($conn->connect_error) {
             resize: vertical;
         }
 
-        /* Removed author_name input styling since it's removed from HTML */
-
         .comment-form button {
             background-color: var(--accent-color);
             color: white;
@@ -253,6 +258,7 @@ if ($conn->connect_error) {
             color: var(--text-color-primary);
             line-height: 1.6;
         }
+        
         .error-message {
             color: #d9534f;
             background-color: #f2dede;
@@ -261,6 +267,25 @@ if ($conn->connect_error) {
             border-radius: 4px;
             margin-bottom: 15px;
             display: <?php echo isset($comment_error) ? 'block' : 'none'; ?>;
+        }
+        
+        .comment-login-notice {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .comment-login-notice a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .comment-login-notice a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -283,7 +308,20 @@ if ($conn->connect_error) {
                         <i class="fas fa-moon" id="themeIcon"></i>
                     </button>
                     <div class="auth-buttons" id="authButtons">
-                        </div>
+                        <?php if ($is_logged_in): ?>
+                            <span class="welcome-text">Welcome, <?php echo htmlspecialchars($username); ?></span>
+                            <button onclick="userLogout()" class="auth-btn logout-btn">
+                                <i class="fas fa-sign-out-alt"></i> Sign Out
+                            </button>
+                        <?php else: ?>
+                            <button onclick="showLogin()" class="auth-btn">
+                                <i class="fas fa-sign-in-alt"></i> Login
+                            </button>
+                            <button onclick="showRegister()" class="auth-btn register-btn">
+                                <i class="fas fa-user-plus"></i> Register
+                            </button>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
             <nav>
@@ -331,10 +369,16 @@ if ($conn->connect_error) {
                         <div class="error-message" style="display: block;"><?php echo htmlspecialchars($comment_error); ?></div>
                     <?php endif; ?>
 
-                    <form class="comment-form" method="POST" action="article.php?id=<?php echo $article_id; ?>">
-                        <textarea name="comment_text" placeholder="Write your comment here..." rows="5" required></textarea>
-                        <button type="submit" name="submit_comment">Post Comment</button>
-                    </form>
+                    <?php if ($is_logged_in): ?>
+                        <form class="comment-form" method="POST" action="article.php?id=<?php echo $article_id; ?>">
+                            <textarea name="comment_text" placeholder="Write your comment here..." rows="5" required></textarea>
+                            <button type="submit" name="submit_comment">Post Comment</button>
+                        </form>
+                    <?php else: ?>
+                        <div class="comment-login-notice">
+                            <p>You must be <a href="user-login.php">logged in</a> to post a comment.</p>
+                        </div>
+                    <?php endif; ?>
 
                     <div class="comment-list">
                         <?php if (!empty($comments)): ?>
@@ -361,47 +405,7 @@ if ($conn->connect_error) {
         </main>
 
         <aside class="sidebar">
-            <section class="sidebar-section">
-                <h3 class="section-title">Trending Now</h3>
-                <div class="trending-list">
-                    <p>Trending articles will appear here.</p>
-                </div>
-            </section>
-
-            <section class="sidebar-section" id="userProfileSection" style="display: none;">
-                <h3 class="section-title">My Profile</h3>
-                <div class="user-profile-card">
-                    <div class="user-avatar">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                    <div class="user-info">
-                        <h4 id="userDisplayName">User Name</h4>
-                        <p id="userEmail">user@example.com</p>
-                        <div class="user-actions">
-                            <button onclick="viewProfile()" class="profile-btn">View Profile</button>
-                            <button onclick="userLogout()" class="logout-btn">Sign Out</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <section class="ad-section">
-                <h3>Advertisement</h3>
-                <p>Your ad could be here!</p>
-                <i class="fas fa-ad" style="font-size: 3rem; margin: 1rem 0;"></i>
-                <p>Contact us for advertising opportunities</p>
-            </section>
-
-            <section class="sidebar-section">
-                <h3 class="section-title">Quick Subscribe</h3>
-                <p>Get daily news updates delivered to your inbox.</p>
-                <div style="margin-top: 1rem;">
-                    <form onsubmit="quickSubscribe(event)">
-                        <input type="email" placeholder="Enter your email" class="sidebar-input" required>
-                        <button type="submit" class="sidebar-btn">Subscribe</button>
-                    </form>
-                </div>
-            </section>
+     
         </aside>
     </div>
 
@@ -456,56 +460,7 @@ if ($conn->connect_error) {
         </div>
     </footer>
 
-    <script src="script.js"></script>
     <script>
-        // This JavaScript section should ideally be in a separate script.js file
-        // but is included here for completeness as per your original code structure.
-
-        // Check user login status and update navigation
-        function checkUserLoginStatus() {
-            const userSession = localStorage.getItem('userSession') || sessionStorage.getItem('userSession');
-            const adminSession = localStorage.getItem('adminLoggedIn');
-            const authButtons = document.getElementById('authButtons');
-            const userProfileSection = document.getElementById('userProfileSection');
-            const adminNavLink = document.getElementById('adminNavLink');
-
-            if (userSession) {
-                // User is logged in
-                const user = JSON.parse(userSession);
-                authButtons.innerHTML = `
-                    <span class="welcome-text">Welcome, ${user.fullName}</span>
-                    <button onclick="userLogout()" class="auth-btn logout-btn">
-                        <i class="fas fa-sign-out-alt"></i> Sign Out
-                    </button>
-                `;
-
-                // Show user profile in sidebar
-                userProfileSection.style.display = 'block';
-                document.getElementById('userDisplayName').textContent = user.fullName;
-                document.getElementById('userEmail').textContent = user.email;
-
-            } else {
-                // User is not logged in
-                authButtons.innerHTML = `
-                    <button onclick="showLogin()" class="auth-btn">
-                        <i class="fas fa-sign-in-alt"></i> Login
-                    </button>
-                    <button onclick="showRegister()" class="auth-btn register-btn">
-                        <i class="fas fa-user-plus"></i> Register
-                    </button>
-                `;
-
-                userProfileSection.style.display = 'none';
-            }
-
-            // Show admin link if admin is logged in
-            if (adminSession === 'true') {
-                adminNavLink.style.display = 'block';
-            } else {
-                adminNavLink.style.display = 'none';
-            }
-        }
-
         // User authentication functions
         function showLogin() {
             window.location.href = 'user-login.php';
@@ -517,48 +472,25 @@ if ($conn->connect_error) {
 
         function userLogout() {
             if (confirm('Are you sure you want to sign out?')) {
-                localStorage.removeItem('userSession');
-                sessionStorage.removeItem('userSession');
-                localStorage.removeItem('adminLoggedIn'); // Also log out admin if admin
-                alert('You have been signed out successfully!');
-                checkUserLoginStatus(); // Update UI after logout
-                window.location.href = 'index.php'; // Redirect to homepage
+                // Clear cookies
+                document.cookie = "userSession=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                
+                // Redirect to logout script if using server-side sessions
+                window.location.href = 'logout.php';
             }
         }
 
         function viewProfile() {
-            alert('Profile page would be implemented here');
+            window.location.href = 'user-profile.php';
         }
 
         // Newsletter subscription
-        function subscribeNewsletter(event) {
-            event.preventDefault();
-            const email = document.getElementById('newsletterEmail').value;
-            const successMsg = document.getElementById('newsletterSuccess');
-
-            // Simple validation
-            if (email && email.includes('@')) {
-                // In a real application, you'd send this email to a server-side script
-                // to save it to your database or mailing list service.
-                successMsg.style.display = 'block';
-                document.getElementById('newsletterEmail').value = '';
-
-                setTimeout(() => {
-                    successMsg.style.display = 'none';
-                }, 5000); // Hide after 5 seconds
-            } else {
-                alert('Please enter a valid email address');
-            }
-        }
-
         function quickSubscribe(event) {
             event.preventDefault();
             const form = event.target;
             const email = form.querySelector('input[type="email"]').value;
 
             if (email && email.includes('@')) {
-                // In a real application, you'd send this email to a server-side script
-                // to save it to your database or mailing list service.
                 alert('Thank you for subscribing!');
                 form.reset();
             } else {
@@ -572,7 +504,6 @@ if ($conn->connect_error) {
             const searchTerm = searchInput.value.trim();
 
             if (searchTerm) {
-                // In a real application, search.php would query the database
                 window.location.href = `search.php?q=${encodeURIComponent(searchTerm)}`;
             } else {
                 alert('Please enter a search term');
@@ -610,7 +541,6 @@ if ($conn->connect_error) {
 
         // Initialize page
         document.addEventListener('DOMContentLoaded', function() {
-            checkUserLoginStatus();
             loadSavedTheme();
 
             // Allow search on Enter key

@@ -402,7 +402,7 @@ $conn->close();
             <a href="index.php">
                 <i class="fas fa-arrow-left"></i> Back to Website
             </a>
-            <a href="admin-login.html">Admin Login</a>
+            <a href="./admin/login.php">Admin Login</a>
         </div>
     </div>
 
